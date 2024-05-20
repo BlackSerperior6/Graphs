@@ -16,54 +16,6 @@ const int VertexRadius = 20; //Радиус вершины графа
 
 const int startMinValue = 10000; //Недостижимый минимум
 
-struct ZeroElement //Структура, олицетворяющая собой нулевой элемент
-{
-	int Row; //Ряд элемента
-	int Column; //Столбец элемента
-	int Value; //Оценка элемента
-
-	ZeroElement() {};
-
-	ZeroElement(int row, int column, int value)
-	{
-		Row = row;
-		Column = column;
-		Value = value;
-	}
-
-	void operator=(ZeroElement &other) 
-	{
-		Row = other.Row;
-		Column = other.Column;
-		Value = other.Value;
-	}
-};
-
-template<typename T>
-struct TurnBackPoint //Структура точки возврата
-{
-	vector<vector<int>> Matrix; //Матрица графа на тот момент
-
-	ZeroElement zero_element; //Нулевой элемент, который будем использовать
-
-	map<T, T> RecordedPath; //Путь на тот момент
-
-	vector<pair<T, T>> Buffer; //Буффер на тот момент
-
-	int Counter; //Счетчик на тот момент
-
-	TurnBackPoint() {}
-
-	TurnBackPoint(vector<vector<int>> &matrix, ZeroElement &zeroElm, map<T, T> &recordedPath, int counter, vector<pair<T, T>>& buffer) 
-	{
-		Matrix = matrix;
-		zero_element = zeroElm;
-		RecordedPath = recordedPath;
-		Counter = counter;
-		Buffer = buffer;
-	}
-};
-
 template<typename T>
 struct GraphElement //Структура элемента графа
 {
@@ -241,32 +193,6 @@ public:
 		return result;
 	}
 
-	string GetShortesPath(T vertex1, T vertex2, vector<vector<int>>& SolutionMatrix,
-		vector<vector<int>>& BufferMatrix)
-	{
-		string result;
-		result = "From " + vertex1 + " to " + vertex2 + ": ";
-
-		if (BufferMatrix[GetVertexIndex(vertex1)][GetVertexIndex(vertex2)] == startMinValue)
-			result += "No path found";
-		else
-		{
-			T temp = vertex1;
-
-			while (temp != vertex2)
-			{
-				result += temp + "->";
-
-				temp = VertexList[SolutionMatrix[GetVertexIndex(temp)]
-					[GetVertexIndex(vertex2)]].Data;
-			}
-
-			result += vertex2;
-		}
-
-		return result;
-	}
-
 	//Метод сдвига вершины
 	void MoveVertex(T data, Vector2i position) 
 	{
@@ -283,331 +209,10 @@ public:
 		element->visualVertex.setPosition(position.x - VertexRadius, position.y - VertexRadius);
 	}
 
-	//Метод проверки возможности решения коммивояжера
-	bool CanSolveMerchantProblem()
-	{
-		if (VertexList.size() <= 1)
-			return false;
-
-		bool result = true;
-
-		//Условие - граф полный (пути есть между всеми городами)
-		for (int i = 0; i < AdjMatrix.size() && result; i++)
-		{
-			for (int j = 0; j < AdjMatrix.size() && result; j++)
-				result = i == j || (AdjMatrix[i][j] != 0 && AdjMatrix[i][j] != -1);
-		}
-
-		return result;
-	}
-
 	//Возвращает кол-во вершин
 	int GetVertexCount()
 	{
 		return VertexList.size();
-	}
-
-	//Метод для решения задачи коммивояжера
-	map<T, T> SolveMerchantProblem()
-	{
-		vector<pair<T, T>> buffer;
-		map<T, T> result;
-
-		vector<vector<int>> BufferMatrix = vector<vector<int>>
-			(AdjMatrix.size(), vector<int>(AdjMatrix.size()));
-
-		//Создаем буфферную матрицы
-		for (int i = 0; i < AdjMatrix.size(); i++)
-		{
-			for (int j = 0; j < AdjMatrix.size(); j++)
-				BufferMatrix[i][j] = i == j ? -1 : AdjMatrix[i][j];
-		}
-
-		vector<TurnBackPoint<T>> TurnBackPoints;
-
-		cout << "Starting table: " << endl << endl;
-
-		//Печатаем в консоль изначальную матрицу
-		PrintTable(BufferMatrix);
-
-		//Заходим в цикл
-		for (int v = 0; v < VertexList.size(); v++)
-		{
-			cout << "----------------------" << endl << endl;
-
-			//Граф на данный момент
-			PrintTable(BufferMatrix);
-
-			vector<int> MinElementsOfRows;
-
-			cout << endl <<"Row minimum elements:" << endl;
-
-			//Находим минимум для каждой строки
-			for (int i = 0; i < BufferMatrix.size(); i++)
-			{
-				int minValue = startMinValue;
-
-				for (int j = 0; j < BufferMatrix.size(); j++)
-				{
-					if (BufferMatrix[i][j] >= 0 && minValue > BufferMatrix[i][j])
-						minValue = BufferMatrix[i][j];
-				}
-
-				cout << i << " : " << minValue << endl;
-				MinElementsOfRows.push_back(minValue);
-			}
-
-			cout << "Matrix after row reduction:" << endl << endl;;
-
-			//Проводим редукцию
-			for (int i = 0; i < BufferMatrix.size(); i++)
-			{
-				for (int j = 0; j < BufferMatrix.size(); j++)
-				{
-					if (BufferMatrix[i][j] > 0)
-						BufferMatrix[i][j] -= MinElementsOfRows[i];
-				}		
-			}
-
-			PrintTable(BufferMatrix);
-
-			vector<int> MinElemntsOfColumns;
-
-			cout << endl << endl << "Minimum column elements:" << endl;
-
-			//Находим минимумы по столбцам
-			for (int i = 0; i < BufferMatrix.size(); i++)
-			{
-				int minValue = startMinValue;
-
-				for (int j = 0; j < BufferMatrix.size(); j++)
-				{
-					if (BufferMatrix[j][i] >= 0 && minValue > BufferMatrix[j][i])
-						minValue = BufferMatrix[j][i];
-				}
-
-				cout << i << " : " << minValue << endl;
-
-				MinElemntsOfColumns.push_back(minValue);
-			}
-
-			//Проводим редукцию
-			for (int i = 0; i < BufferMatrix.size(); i++)
-			{
-				for (int j = 0; j < BufferMatrix.size(); j++)
-
-					if (BufferMatrix[j][i] > 0)
-						BufferMatrix[j][i] -= MinElemntsOfColumns[i];
-			}
-
-			cout << endl << "Matrix after second reduction: " << endl << endl;
-
-			PrintTable(BufferMatrix);
-
-			vector<ZeroElement> ZeroElements;
-
-			//Находим оценку всем нулевым элементам
-			for (int i = 0; i < BufferMatrix.size(); i++)
-			{
-				for (int j = 0; j < BufferMatrix.size(); j++)
-				{
-					if (BufferMatrix[i][j] == 0)
-					{
-						int minRow = startMinValue;
-						int minColumn = startMinValue;
-
-						for (int uj = 0; uj < BufferMatrix.size(); uj++)
-						{
-							if (BufferMatrix[i][uj] >= 0 && j != uj)
-							{
-								if (minRow > BufferMatrix[i][uj])
-									minRow = BufferMatrix[i][uj];
-							}	
-						}
-
-						for (int ui = 0; ui < BufferMatrix.size(); ui++)
-						{
-							if (BufferMatrix[ui][j] >= 0 && ui != i)
-							{
-								if (minColumn > BufferMatrix[ui][j])
-									minColumn = BufferMatrix[ui][j];
-							}
-						}
-
-						ZeroElement element(i, j, minColumn + minRow);
-						ZeroElements.push_back(element);
-					}
-				}
-			}
-
-			//Если не нашли нулевых элементов вообще
-			if (ZeroElements.size() == 0)
-			{
-				cout << "No more zero elements, finding obvious routes" << endl;
-
-				for (int i = 0; i < VertexList.size(); i++)
-				{
-					bool flag = false;
-
-					//Находим очевидные решения, которые потерялись в процессе редукции
-					if (result.find(VertexList[i].Data) == result.end())
-					{
-						for (int j = 0; j < VertexList.size() && !flag; j++)
-						{
-							if (i == j)
-								continue;
-
-							bool does_exist = false;
-
-							for (auto& elm : result)
-							{
-								if (elm.second == VertexList[j].Data)
-								{
-									does_exist = true;
-									break;
-								}
-							}
-
-							flag = !does_exist;
-
-							if (flag)
-								result[VertexList[i].Data] = VertexList[j].Data;
-						}
-					}
-				}
-			}
-			else //Иначе
-			{
-				int maxValue = -1;
-				vector<ZeroElement> maxElements;
-
-				cout << "Zero elements:" << endl;
-
-				//Печатаем все нулевые элементы в консоль
-				for (int i = 0; i < ZeroElements.size(); i++)
-					cout << ZeroElements[i].Row << " " << ZeroElements[i].Column << " " << ZeroElements[i].Value << endl;
-
-				//Находим нулевые элементы с максимальным значением
-				for (int i = 0; i < ZeroElements.size(); i++)
-				{
-					if (maxValue < ZeroElements[i].Value)
-					{
-						maxElements.clear();
-
-						maxElements.push_back(ZeroElements[i]);
-
-						maxValue = ZeroElements[i].Value;
-					}
-					else if (maxValue == ZeroElements[i].Value)
-						maxElements.push_back(ZeroElements[i]);
-				}
-
-				if (maxElements.size() > 1) //Если их больше одного
-				{
-					cout << "More than one max value zero elements found, creating a turn back point for each but not the first one!" << endl;
-
-					//Создаем точку возврата
-					for (int i = 1; i < maxElements.size(); i++)
-						TurnBackPoints.push_back(TurnBackPoint<T>(BufferMatrix, maxElements[i], result, v, buffer));
-				}
-
-				//Выбираем первый из найденых нулевых элементов
-				ZeroElement maxElement = maxElements[0];
-
-				pair<T, T> to_add;
-
-				to_add.first = VertexList[maxElement.Row].Data;
-				to_add.second = VertexList[maxElement.Column].Data;
-
-				//Закрываем элементы, которые могут привести к созданию неправильного цикла
-				for (int i = 0; i < buffer.size(); i++)
-				{
-					if (to_add.first == buffer[i].second)
-						BufferMatrix[GetVertexIndex(to_add.second)][GetVertexIndex(buffer[i].first)] = -1;
-				}
-
-				//Добавляем в буффер
-				buffer.push_back(to_add);
-
-				cout << "Result pair: " << to_add.first << " " << to_add.second << endl;
-
-				//Добавляем в итоговый маршрут
-				result[VertexList[maxElement.Row].Data] = VertexList[maxElement.Column].Data;
-
-				//Закрываем элементы в строке найденного элемента
-				for (int i = 0; i < BufferMatrix.size(); i++)
-					BufferMatrix[maxElement.Row][i] = -1;
-
-				//В столбце
-				for (int i = 0; i < BufferMatrix.size(); i++)
-					BufferMatrix[i][maxElement.Column] = -1;
-
-				//Закрываем обратный путь
-				BufferMatrix[maxElement.Row][maxElement.Column] = -1;
-				BufferMatrix[maxElement.Column][maxElement.Row] = -1;
-
-				cout << "Matrix after full reduction: " << endl << endl;
-
-				PrintTable(BufferMatrix);
-			}
-
-			if (v == VertexList.size() - 1) //Если мы находимся на псоледней итерации цикла
-			{
-				if (CheckInvalid(result)) //Если путь плох
-				{
-					cout << "Path is found but deemed bad, returning to one of the turn back points!" << endl << endl;
-
-					//Берем последнюю точку возврата
-					TurnBackPoint<T>& point = TurnBackPoints[TurnBackPoints.size() - 1];
-
-					//Получаем из нее все данные
-					BufferMatrix = point.Matrix;
-					result = point.RecordedPath;
-					buffer = point.Buffer;
-					ZeroElement chosenElement = point.zero_element;
-					v = point.Counter;
-
-					pair<T, T> to_add2;
-
-					//Делаем абсолютно такие же действия, как если бы обычным путем нашли бы нулевой из точки
-
-					to_add2.first = VertexList[chosenElement.Row].Data;
-					to_add2.second = VertexList[chosenElement.Column].Data;
-
-					for (int i = 0; i < buffer.size(); i++)
-					{
-						if (to_add2.first == buffer[i].second)
-							BufferMatrix[GetVertexIndex(to_add2.second)][GetVertexIndex(buffer[i].first)] = -1;
-					}
-
-					buffer.push_back(to_add2);
-
-					cout << "Result pair: " << to_add2.first << " " << to_add2.second << endl;
-
-					result[VertexList[chosenElement.Row].Data] = VertexList[chosenElement.Column].Data;
-
-					for (int i = 0; i < BufferMatrix.size(); i++)
-						BufferMatrix[chosenElement.Row][i] = -1;
-
-
-					for (int i = 0; i < BufferMatrix.size(); i++)
-						BufferMatrix[i][chosenElement.Column] = -1;
-
-					BufferMatrix[chosenElement.Row][chosenElement.Column] = -1;
-					BufferMatrix[chosenElement.Column][chosenElement.Row] = -1;
-
-					TurnBackPoints.pop_back(); //Удаляем точку возврата
-
-					cout << "Matrix after full reduction: " << endl << endl;
-
-					PrintTable(BufferMatrix);
-				}
-				else //Иначе просто заканчиваем цикл
-					cout << "Path is found and deemed good!" << endl;
-			}	
-		}
-
-		return result; //Возвращаем результат
 	}
 
 	void AddEdge(T vertex1, T vertex2, int weight) //Метод добавления ребра в граф
@@ -660,27 +265,29 @@ private:
 	//Матрица смежности
 	vector<vector<int>> AdjMatrix;
 
-	bool CheckInvalid(map<T, T>& path)
+	string GetShortesPath(T vertex1, T vertex2, vector<vector<int>>& SolutionMatrix,
+		vector<vector<int>>& BufferMatrix)
 	{
-		vector<T> metPoints;
+		string result;
+		result = "From " + vertex1 + " to " + vertex2 + ": ";
 
-		T current = VertexList[0].Data;
-
-		bool result = false;
-
-		//Проходим по всему маршруту
-		for (int i = 0; i < VertexList.size() - 1 && !result; i++)
+		if (BufferMatrix[GetVertexIndex(vertex1)][GetVertexIndex(vertex2)] == startMinValue)
+			result += "No path found";
+		else
 		{
-			//Проверяем, встречался ли уже этот город
-			for (int j = 0; j < metPoints.size() && !result; j++)
-				result = metPoints[j] == current;
+			T temp = vertex1;
 
-			//Переход к следующему
-			metPoints.push_back(current);
-			current = path[current];
+			while (temp != vertex2)
+			{
+				result += temp + "->";
+
+				temp = VertexList[SolutionMatrix[GetVertexIndex(temp)]
+					[GetVertexIndex(vertex2)]].Data;
+			}
+
+			result += vertex2;
 		}
 
-		//Возрат флага
 		return result;
 	}
 
